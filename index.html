@@ -185,6 +185,7 @@ document.getElementById('themeToggle').addEventListener('click',()=>setNamuTheme
 
 
 
+
 // NAMU_UI_ENHANCEMENTS
 // UI state is local to this browser; document content remains unchanged.
 const uiRead=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key));return value??fallback}catch{return fallback}};
@@ -227,7 +228,6 @@ render=function(id){const d=source.docs.find(x=>x.id===id);if(!d)return;
  const headings=[...body.querySelectorAll('h2,h3')].filter(h=>h.textContent.trim());headings.forEach((h,i)=>h.id='section-'+i);
  const links=headings.map(h=>'<a class="'+(h.tagName==='H3'?'subheading':'')+'" href="#'+h.id+'">'+esc(h.textContent)+'</a>').join('');
  $('toc').innerHTML=headings.length?'<strong>이 문서에서</strong>'+links:'';
- if(headings.length){const contents=document.createElement('details');contents.className='inline-contents';contents.innerHTML='<summary>문서 목차 · '+headings.length+'</summary>'+links;body.before(contents)}
 };
 const baseRenderHome=renderHome;
 renderHome=function(){baseRenderHome();renderLibrary();renderSearch()};
