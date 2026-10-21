@@ -1,0 +1,73 @@
+name: Flow API sync & publish
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['index.html', 'api-sync/**', '.github/workflows/flow-sync.yml']
+concurrency:
+  group: namu-wiki-publish
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    outputs:
+      publish: ${{ steps.ready.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: api-sync/package-lock.json
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: api-sync
+      - run: npm test
+        working-directory: api-sync
+      - name: Read Flow and update data only
+        id: sync
+        if: github.event_name != 'push'
+        env:
+          FLOW_API_KEY: ${{ secrets.FLOW_API_KEY }}
+        run: node api-sync/sync.cjs index.html
+      - name: Save changed documents
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          git config user.name 'NAMU Wiki updater'
+          git config user.email 'wiki-updater@localhost'
+          git add -- index.html
+          git commit -m 'Sync Trouble Shooting from Flow API'
+          git push origin HEAD:main
+      - name: Prepare public site only
+        id: ready
+        if: github.event_name != 'schedule' || steps.sync.outputs.changed == 'true'
+        run: |
+          mkdir _site
+          cp index.html _site/index.html
+          touch _site/.nojekyll
+          echo 'publish=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-pages-artifact@v4
+        if: steps.ready.outputs.publish == 'true'
+        with:
+          path: _site
+  deploy:
+    needs: build
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
