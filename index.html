@@ -85,6 +85,12 @@ html .side .tree .document-label{min-width:0;overflow:hidden;text-overflow:ellip
 </style><style>
 .brand-home{border:0;background:none;padding:0;color:#263d30;font-size:16px;font-weight:700;cursor:pointer}.home-link{border:0;background:none;padding:0;color:#326d50;font-size:12px;cursor:pointer}.home-link:hover{text-decoration:underline}.home-grid{display:block;max-width:1400px;width:100%;padding:32px 40px 60px}.home-grid .toc{display:none}.home-hero{text-align:center;padding:12px 0 30px}.home-logo{width:190px;height:auto;max-width:65%;margin-bottom:8px}.home-hero h1{font-size:30px;letter-spacing:-.8px;margin:10px 0}.home-hero p{font-size:12px;color:#7c8980;margin:12px 0}.home-stats{font-size:11px;color:#54745d;margin-top:17px}.home-stats span{margin:0 12px;color:#b0bdb3}.brand-section{margin-bottom:28px}.brand-heading{display:flex;align-items:center;gap:12px;border-bottom:1px solid #dce6de;padding-bottom:10px;margin-bottom:14px}.brand-heading h2{font-size:17px;color:#1a6540;margin:0}.brand-heading>span{font-size:10px;color:#89998d}.model-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}.model-card{border:1px solid #dce6df;border-radius:9px;background:#fff;overflow:hidden}.model-heading{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;background:#f2f6f3;border-bottom:1px solid #e3ebe5}.model-heading h3{font-size:13px;color:#354b3c;margin:0}.model-heading>span{font-size:10px;color:#77907c}.home-docs{padding:6px 9px}.home-doc{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:8px 6px;border:0;border-radius:4px;background:none;text-align:left;color:#56665b;font-size:11px;line-height:1.6}.home-doc span{overflow-wrap:anywhere}.home-doc i{font-style:normal;color:#94aa9a;flex-shrink:0}.home-doc:hover{background:#eaf3ed;color:#19623b}.no-docs{font-size:11px;color:#96a29a;padding:9px 6px;margin:0}@media(max-width:1200px){.model-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-grid{padding:28px}}@media(max-width:760px){.model-grid{grid-template-columns:1fr}.home-grid{padding:24px 20px}.home-logo{width:155px}.home-hero h1{font-size:25px}.brand-home{font-size:14px}}
 </style><style>.tree>details{margin-bottom:14px}.tree>details>summary{font-size:15px;font-weight:900;color:#104c30;background:#d3e2d8;border-left:4px solid #227247;border-radius:5px;padding:10px 9px;margin-bottom:6px;letter-spacing:.3px}.tree>details>summary .count{font-weight:700;color:#376349}.models>details>summary{padding:3px 8px;font-size:12px;line-height:1.35;min-height:24px}.models>details{margin:0}.docs .doc{padding:4px 10px;margin:0}.tree .empty-model{padding:5px 10px}</style><style id="namu-ui-enhancements">.side,.workspace{transition:none!important}
+html[data-theme="dark"] .model-heading{background:#2b4033;border-color:#405749}
+html[data-theme="dark"] .model-heading h3{color:#e3f1e8}
+html[data-theme="dark"] .model-heading span{color:#b8d7c3}
+html[data-theme="dark"] .brand-heading{border-color:#405749}
+html[data-theme="dark"] .brand-heading>span{color:#adbbb2}
+#quickDocuments{border-top:1px solid var(--nav-guide);padding-top:12px;margin-top:18px}
 .search-result,.quick-doc{font:inherit;color:inherit;text-align:left;cursor:pointer}
 #searchResults,#quickDocuments{margin-top:16px;font-size:12px;color:var(--nav-doc)}
 .search-result{display:block;width:100%;border:1px solid var(--nav-guide);border-radius:6px;background:transparent;padding:10px;margin:6px 0;overflow-wrap:anywhere}
@@ -186,6 +192,7 @@ document.getElementById('themeToggle').addEventListener('click',()=>setNamuTheme
 
 
 
+
 // NAMU_UI_ENHANCEMENTS
 // UI state is local to this browser; document content remains unchanged.
 const uiRead=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key));return value??fallback}catch{return fallback}};
@@ -197,7 +204,7 @@ function highlightText(text,query){text=String(text||'');if(!query)return esc(te
 function hasDocumentBody(d){return !d.pending&&!!(String(d.body||'').trim()||d.images?.length||JSON.stringify(d.nodes||[]).includes('"href"'))}
 const uiSearch=document.createElement('section');uiSearch.id='searchResults';uiSearch.setAttribute('aria-label','문서 검색 결과');
 const uiLibrary=document.createElement('section');uiLibrary.id='quickDocuments';uiLibrary.setAttribute('aria-label','즐겨찾기와 최근 문서');
-$('tree').before(uiSearch,uiLibrary);
+$('tree').before(uiSearch);$('tree').after(uiLibrary);
 function libraryList(ids){return ids.map(id=>source.docs.find(d=>d.id===id)).filter(Boolean).map(d=>'<button class="quick-doc" data-ui-doc="'+esc(d.id)+'" title="'+esc(d.brand+' > '+d.model+' > '+d.title)+'">'+esc(d.title)+'</button>').join('')}
 function renderLibrary(){uiLibrary.innerHTML='<details><summary>☆ 즐겨찾기 <span>'+favorites.size+'</span></summary>'+(favorites.size?libraryList([...favorites]):'<p>문서의 별 버튼으로 추가하세요.</p>')+'</details><details><summary>최근 열람 <span>'+recentIds.length+'</span></summary>'+(recentIds.length?libraryList(recentIds):'<p>열람한 문서가 여기에 표시됩니다.</p>')+'</details>'}
 function renderSearch(){const q=$('search').value.trim();uiSearch.hidden=!q;uiLibrary.hidden=!!q;if(!q){uiSearch.innerHTML='';return}
