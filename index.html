@@ -106,7 +106,18 @@ mark{background:#d5ead0;color:#183d29;border-radius:2px;padding:0 1px}html[data-
 .document-actions button{border:1px solid var(--line);background:transparent;color:var(--accent);padding:7px 12px;border-radius:6px;font-size:12px}
 .document-actions button[aria-pressed="true"]{background:#244d38;color:#d5ffe7}
 .preparing{background:#e9eee9;color:#596d5d;padding:5px 9px;border-radius:5px;font-size:11px}.preparing-title{display:block;margin-bottom:8px}html[data-theme="dark"] .preparing{background:#344639;color:#d0ddcf}
-#article>h1{font-size:clamp(24px,3vw,34px);line-height:1.4;overflow-wrap:anywhere}
+#article>.document-header{background:#edf4ef;border-left:4px solid #83e8c0;border-radius:0 5px 5px 0;padding:24px 32px;margin:0 0 32px;min-width:0}
+html[data-theme="dark"] #article>.document-header{background:#1b2d25}
+#article>.document-header h1{font-size:clamp(24px,3vw,34px);line-height:1.4;overflow-wrap:anywhere;max-width:100%}
+#article>.document-header .meta{border-bottom:0;padding-bottom:0;min-width:0}
+#article>.document-header .meta>span{min-width:0;max-width:100%;overflow-wrap:anywhere}
+#article>.document-header .eyebrow{flex-wrap:wrap;overflow-wrap:anywhere}
+#article>.document-header .eyebrow::before{display:none}
+#article>.document-header .document-actions{flex-wrap:wrap}
+#article>.document-header+.document-body{display:flow-root;margin-top:0;background:transparent}
+#article>.document-header+.document-body>:first-child{margin-top:0}
+#article>.document-header+.document-body h2{border-bottom:1px solid #30483c}
+@media(max-width:760px){#article>.document-header{padding:20px;border-left-width:3px;margin-bottom:24px}}
 .document-body{font-size:14px;line-height:1.8}.document-body p{margin:0;white-space:pre-wrap}
 .document-body h2{font-size:21px;font-weight:700;line-height:1.5;margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .document-body h3{font-size:17px;font-weight:700;line-height:1.6;margin:20px 0 8px}
@@ -193,6 +204,7 @@ document.getElementById('themeToggle').addEventListener('click',()=>setNamuTheme
 
 
 
+
 // NAMU_UI_ENHANCEMENTS
 // UI state is local to this browser; document content remains unchanged.
 const uiRead=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key));return value??fallback}catch{return fallback}};
@@ -229,6 +241,9 @@ render=function(id){const d=source.docs.find(x=>x.id===id);if(!d)return;
  const dateSpan=$('article').querySelector('.meta span:nth-child(2)');
  if(dateSpan){const raw=String(date||''),formatted=/^\d{8}/.test(raw)?raw.slice(0,8).replace(/(\d{4})(\d{2})(\d{2})/,'$1.$2.$3'):/^\d{4}-\d{2}-\d{2}/.test(raw)?raw.slice(0,10):'';dateSpan.textContent=(d.author?d.author+' · ':'')+(formatted?'문서 날짜 '+formatted:'문서 날짜 미제공');dateSpan.title='원본에서 수집된 문서 날짜입니다. 수정일 필드가 있으면 우선 표시합니다.'}
  const body=$('article').querySelector('.document-body');
+ const documentHeader=document.createElement('header');documentHeader.className='document-header';
+ const headerElements=[...$('article').children].filter(el=>el.matches('.eyebrow,h1,.document-actions,.meta'));
+ headerElements[0].before(documentHeader);headerElements.forEach(el=>documentHeader.append(el));
  if(!hasDocumentBody(d)){const empty=body.querySelector('.empty');if(empty)empty.insertAdjacentHTML('afterbegin','<strong class="preparing-title">준비 중</strong>')}
  body.querySelectorAll('table').forEach(table=>{const wrap=document.createElement('div');wrap.className='table-scroll';wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','표 · 좌우로 스크롤');table.before(wrap);wrap.append(table)});
  body.querySelectorAll('p,blockquote').forEach(p=>{if(/^(?:⚠|주의\s*[:：]|경고\s*[:：])/.test(p.textContent.trim()))p.classList.add('warning-note')});
