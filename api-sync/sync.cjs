@@ -76,6 +76,7 @@ async function main(){
  assert.equal(fingerprint(await collectTasks(key)),fingerprint(tasks),'Flow changed during collection; retry next run');
  const unchanged=JSON.stringify(next)===JSON.stringify(previous);
  if(!unchanged){next.fetchedAt=new Date().toISOString();assert.ok(!JSON.stringify(next).includes(key),'Credential leaked');if(modular){writeDataset(path.dirname(filename),next);assert.equal(fs.readFileSync(filename,'utf8'),html,'UI changed');}else{const result=replaceSource(html,next);assert.equal(result.replace(DATA,'DATA'),html.replace(DATA,'DATA'),'UI changed');assert.ok(Buffer.byteLength(result)<95*1024*1024,'HTML exceeds repository size limit');fs.writeFileSync(filename+'.tmp',result);fs.renameSync(filename+'.tmp',filename);}}
+ if(modular)fs.writeFileSync(path.join(path.dirname(filename),'data/sync-status.json'),JSON.stringify({completedAt:new Date().toISOString()})+'\n');
  console.log(JSON.stringify({changed:!unchanged,documents:next.docs.length,models:next.models.length,images:Object.keys(next.assets).length}));
  if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'changed='+!unchanged+'\n');
 }
