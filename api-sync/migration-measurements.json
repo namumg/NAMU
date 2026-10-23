@@ -1,0 +1,42 @@
+{
+  "counts": {
+    "documents": 36,
+    "brands": 8,
+    "models": 23,
+    "images": 108
+  },
+  "preservation": "all fields identical; all image bytes identical; all images decoded",
+  "htmlBytes": {
+    "before": 55106500,
+    "after": 2067
+  },
+  "localBrowser": {
+    "initialMs": 884.0598999999997,
+    "oldInitialMs": 1486.5395000000008,
+    "oldMetrics": {
+      "searchMs": 2.5,
+      "articleMs": 12.5,
+      "initialBytes": 55106500
+    },
+    "initialBytes": 129075,
+    "search": [
+      2.5,
+      2.2000000001862645,
+      1.5
+    ],
+    "article": [
+      33.60000000009313,
+      17.800000000279397,
+      15.300000000279397,
+      7.399999999906868
+    ],
+    "images": [
+      5.400000000372529,
+      11.799999999813735,
+      18.300000000279397,
+      13.5,
+      23.899999999906868
+    ]
+  },
+  "checks": "home, lazy data loading, direct URL, reload, history, search, empty search, search state, favorites, related links, image zoom, theme, resize, mobile, loading failure and retry"
+}

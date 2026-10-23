@@ -1,0 +1,2 @@
+import {start} from "./ui.js";
+const article=document.getElementById("article");article.innerHTML="<p role=\"status\">자료를 불러오는 중…</p>";start().catch(()=>{article.innerHTML="<p role=\"alert\">자료를 불러오지 못했습니다.</p><button id=\"retryApp\">다시 시도</button>";document.getElementById("retryApp").onclick=()=>location.reload();});
