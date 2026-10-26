@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['index.html', 'css/**', 'js/**', 'data/**', 'images/**', 'api-sync/**', '.github/workflows/flow-sync.yml']
+    paths: ['index.html', 'css/**', 'js/**', 'data/**', 'images/**', 'internal/**', 'api-sync/**', '.github/workflows/flow-sync.yml']
 concurrency:
   group: namu-wiki-publish
   cancel-in-progress: false
@@ -37,13 +37,14 @@ jobs:
         if: github.event_name != 'push'
         env:
           FLOW_API_KEY: ${{ secrets.FLOW_API_KEY }}
+          INTERNAL_PASSWORD: ${{ secrets.INTERNAL_PASSWORD }}
         run: node api-sync/sync.cjs index.html
       - name: Save documents and successful sync time
         if: steps.sync.outcome == 'success'
         run: |
           git config user.name 'NAMU Wiki updater'
           git config user.email 'wiki-updater@localhost'
-          git add -- index.html data images
+          git add -- index.html data images internal
           git commit -m 'Sync Trouble Shooting from Flow API'
           git push origin HEAD:main
       - name: Prepare public site only
@@ -51,7 +52,7 @@ jobs:
         run: |
           mkdir _site
           cp index.html _site/index.html
-          cp -r css js data images _site/
+          cp -r css js data images internal _site/
           touch _site/.nojekyll
           echo 'publish=true' >> "$GITHUB_OUTPUT"
       - uses: actions/upload-pages-artifact@v4

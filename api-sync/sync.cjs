@@ -1,7 +1,8 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {JSDOM}=require('jsdom');
-const {readDataset,writeDataset}=require('./storage.cjs');
+const {readDataset,writeDataset,pruneGenerated}=require('./storage.cjs');
+const {partition,encrypt,GROUP}=require('./internal.cjs');
 const PROJECT='2970230',DATA=/<script id="source" type="application\/json">([\s\S]*?)<\/script>/g;
 function readSource(html){const matches=[...html.matchAll(DATA)];assert.equal(matches.length,1,'Expected exactly one wiki data block');return JSON.parse(matches[0][1]);}
 function replaceSource(html,data){readSource(html);return html.replace(DATA,()=>'<script id="source" type="application/json">'+JSON.stringify(data).replace(/</g,'\\u003c')+'</script>');}
@@ -71,11 +72,21 @@ async function main(){
  const modular=fs.existsSync(path.join(path.dirname(filename),'data/index.json'));
  const html=fs.readFileSync(filename,'utf8'),previous=modular?readDataset(path.dirname(filename)):readSource(html),tasks=await collectTasks(key),details=[];
  for(const task of tasks)details.push(await api('/user/posts/'+task.postId,key));
- const collected=makeData(previous,tasks,details);
+ const split=partition(tasks,details);
+ const publicPrevious={...previous,brands:previous.brands.filter(b=>b!==GROUP),models:previous.models.filter(m=>!split.privateIds.has(m.id)),docs:previous.docs.filter(d=>!split.privatePostIds.has(d.id))};
+ const collected=makeData(publicPrevious,split.publicTasks,split.publicDetails);
  const next={...previous,...collected,models:collected.models.map(m=>({...previous.models.find(p=>p.id===m.id),...m})),docs:collected.docs.map(d=>({...previous.docs.find(p=>p.id===d.id),...d}))};await loadAssets(next,previous);
+ const detailMap=new Map(details.map(d=>[d.postId,d]));
+ const internal={docs:split.privateTasks.map(t=>{const d=detailMap.get(t.postId);assert.equal(d.projectId,PROJECT);return {id:d.postId,parentId:t.upTaskId,title:d.title,...parseContent(d),author:d.registerName||'',date:d.registeredDateTime||'',editedDateTime:d.editedDateTime||'',attachments:d.attachments||[],url:d.connectUrl||'https://flow.team/main.act?detail='+PROJECT+'|'+d.postId};}),assets:{}};
+ await loadAssets(internal,{assets:{}});
+ const privatePath=path.join(path.dirname(filename),'internal/encrypted.json');
+ const oldEnvelope=fs.existsSync(privatePath)?JSON.parse(fs.readFileSync(privatePath,'utf8')):null;
+ const encrypted=encrypt(internal,process.env.INTERNAL_PASSWORD,oldEnvelope);
  assert.equal(fingerprint(await collectTasks(key)),fingerprint(tasks),'Flow changed during collection; retry next run');
  const unchanged=JSON.stringify(next)===JSON.stringify(previous);
  if(!unchanged){next.fetchedAt=new Date().toISOString();assert.ok(!JSON.stringify(next).includes(key),'Credential leaked');if(modular){writeDataset(path.dirname(filename),next);assert.equal(fs.readFileSync(filename,'utf8'),html,'UI changed');}else{const result=replaceSource(html,next);assert.equal(result.replace(DATA,'DATA'),html.replace(DATA,'DATA'),'UI changed');assert.ok(Buffer.byteLength(result)<95*1024*1024,'HTML exceeds repository size limit');fs.writeFileSync(filename+'.tmp',result);fs.renameSync(filename+'.tmp',filename);}}
+ fs.mkdirSync(path.dirname(privatePath),{recursive:true});fs.writeFileSync(privatePath,JSON.stringify(encrypted));
+ if(modular)pruneGenerated(path.dirname(filename));
  if(modular)fs.writeFileSync(path.join(path.dirname(filename),'data/sync-status.json'),JSON.stringify({completedAt:new Date().toISOString()})+'\n');
  console.log(JSON.stringify({changed:!unchanged,documents:next.docs.length,models:next.models.length,images:Object.keys(next.assets).length}));
  if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'changed='+!unchanged+'\n');

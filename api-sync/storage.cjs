@@ -15,4 +15,14 @@ function writeDataset(root,source){
  const {docs,assets:originalAssets,...other}=source;const index={...other,schemaVersion:2,docs:indexDocs,assetPath,searchPath};write(root,'data/index.json',JSON.stringify(index));return index;
 }
 function readDataset(root){const index=JSON.parse(fs.readFileSync(path.join(root,'data/index.json'),'utf8'));const {schemaVersion,assetPath,searchPath,docs,...other}=index;const assets={};for(const [url,a]of Object.entries(JSON.parse(fs.readFileSync(path.join(root,assetPath),'utf8')))){const bytes=fs.readFileSync(path.join(root,a.path));assert.equal(hash(bytes),a.sha256);assets[url]='data:'+a.mime+';base64,'+bytes.toString('base64');}return {...other,docs:docs.map(d=>JSON.parse(fs.readFileSync(path.join(root,d.articlePath),'utf8')).document),assets};}
-module.exports={writeDataset,readDataset,hash};
+// Remove obsolete generated payloads so a moved private page cannot remain at an old static URL.
+// Only known generated filenames inside these exact directories are eligible.
+function pruneGenerated(root){
+ const index=JSON.parse(fs.readFileSync(path.join(root,'data/index.json'),'utf8'));
+ const assets=JSON.parse(fs.readFileSync(path.join(root,index.assetPath),'utf8'));
+ const keep=new Set([index.assetPath,index.searchPath,...index.docs.map(d=>d.articlePath),...Object.values(assets).map(a=>a.path)]);
+ for(const [dir,pattern] of [['data',/^(?:assets|search-index)\.[a-f0-9]{16}\.json$/],['data/articles',/^\d+\.[a-f0-9]{16}\.json$/],['images',/^[a-f0-9]{64}\.(?:png|jpg|gif)$/]]){
+  for(const name of fs.readdirSync(path.join(root,dir))){const relative=dir+'/'+name;if(pattern.test(name)&&!keep.has(relative))fs.unlinkSync(path.join(root,relative));}
+ }
+}
+module.exports={writeDataset,readDataset,hash,pruneGenerated};
