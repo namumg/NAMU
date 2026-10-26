@@ -15,8 +15,8 @@ export default {
   if(diff)return reply({error:'내부 전용 잠금을 해제한 후 다시 시도해주세요.'},401);
   const url=new URL(request.url);
   async function gh(endpoint,method='GET',body){
-   const r=await fetch('https://api.github.com/repos/'+REPO+endpoint,{method,headers:{'Authorization':'Bearer '+env.GITHUB_ACTIONS_TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'NAMU-Flow-Sync','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000),redirect:'error'});
-   if(!r.ok)throw Error('GitHub request failed');return r.status===204?null:r.json();
+   const r=await fetch('https://api.github.com/repos/'+REPO+endpoint,{method,headers:{'Authorization':'Bearer '+env.GITHUB_ACTIONS_TOKEN.trim(),'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'NAMU-Flow-Sync','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,redirect:'manual'});
+   if(!r.ok){const error=Error('GitHub request failed');error.code='GITHUB_'+r.status;throw error;}return r.status===204?null:r.json();
   }
   const summarize=r=>({runId:r.id,status:r.status,conclusion:r.conclusion,createdAt:r.created_at});
   try{
@@ -42,6 +42,6 @@ export default {
     return reply(run?summarize(run):{status:'queued',requestId});
    }
    return reply({error:'지원되지 않는 요청입니다.'},404);
-  }catch{return reply({error:'동기화 서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.'},502);}
+  }catch(error){return reply({error:'동기화 서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.',code:error.code||(/header/i.test(error.message)?'INVALID_HEADER':/fetch/i.test(error.message)?'FETCH_FAILED':error.name)},502);}
  }
 };
