@@ -1,3 +1,4 @@
+import {createFlowSync} from "./flow-sync.js";
 const lockIcon='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4M12 14v3"/></svg>';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const bytes=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
@@ -8,14 +9,18 @@ export function mountInternal({renderBody}){
  const article=document.getElementById('article'),bread=document.getElementById('bread');
  const button=document.createElement('a');button.href='#/internal';button.className='internal-access-button';button.innerHTML=lockIcon+'<span>내부 전용</span>';document.getElementById('sidebar').append(button);
  let data=null,active=false,generation=0,assetURLs={},urls=[];
+ const flowSync=createFlowSync({getToken:()=>data?.syncToken,onComplete:async(signal,createdAt)=>{
+  for(let i=0;i<24;i++){if(signal.aborted)return;const response=await fetch(new URL('../data/sync-status.json?sync='+Date.now(),import.meta.url),{cache:'no-store',signal});const status=await response.json();if(Date.parse(status.completedAt)>=Date.parse(createdAt)){location.reload();return;}await new Promise(r=>setTimeout(r,5000));}
+  throw Error('동기화는 완료됐으며 사이트 배포가 반영 중입니다. 잠시 후 새로고침해 주세요.');
+ }});
  const clear=()=>{data=null;urls.forEach(URL.revokeObjectURL);urls=[];assetURLs={};const lightbox=document.getElementById('lightbox');lightbox.close();document.getElementById('largeImage').removeAttribute('src');};
  const removeSession=()=>{try{sessionStorage.removeItem(sessionKey)}catch{}};
  const saveSession=value=>{try{sessionStorage.setItem(sessionKey,JSON.stringify(value))}catch{}};
- const header=()=>'<header class="document-header internal-heading"><div class="eyebrow">'+lockIcon+' 내부 전용</div><div class="document-actions">'+(data?'<button id="internalSync" title="GitHub에서 Run workflow를 누르면 Flow 동기화가 시작됩니다. 새 창으로 열립니다.">FLOW 동기화 ↗</button><button id="internalLock">'+lockIcon+' 잠금</button>':'')+'</div></header>';
+ const header=()=>'<header class="document-header internal-heading"><div class="eyebrow">'+lockIcon+' 내부 전용</div><div class="document-actions">'+(data?'<button id="internalSync" title="Flow 자료를 수집하고 사이트를 갱신합니다.">FLOW 동기화</button><button id="internalLock">'+lockIcon+' 잠금</button>':'')+'</div></header>';
  async function envelope(){const r=await fetch(new URL('../internal/encrypted.json',import.meta.url),{cache:'no-store'});if(!r.ok)throw Error('자료를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');const e=await r.json();if(e.version!==1||e.iterations!==600000)throw Error('자료 형식을 확인할 수 없습니다.');return e;}
  async function unlock(e,raw){const k=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt']);const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes(e.iv),additionalData:new TextEncoder().encode('NAMU Internal Access v1')},k,bytes(e.ciphertext));const result=JSON.parse(new TextDecoder().decode(plain));if(!Array.isArray(result.docs))throw Error('Invalid data');return result;}
  function prepare(result){clear();data=result;for(const [source,uri] of Object.entries(result.assets||{})){const m=uri.match(/^data:(image\/(?:png|jpeg|gif));base64,(.+)$/s);if(!m)continue;const url=URL.createObjectURL(new Blob([bytes(m[2])],{type:m[1]}));urls.push(url);assetURLs[source]=url;}}
- function actions(){document.getElementById('internalLock')?.addEventListener('click',()=>{++generation;removeSession();clear();history.replaceState(null,'','#/internal');login();});document.getElementById('internalSync')?.addEventListener('click',()=>{window.open('https://github.com/namumg/NAMU/actions/workflows/flow-sync.yml','_blank','noopener,noreferrer');});}
+ function actions(){document.getElementById('internalLock')?.addEventListener('click',()=>{flowSync.cancel();++generation;removeSession();clear();history.replaceState(null,'','#/internal');login();});document.getElementById('internalSync')?.addEventListener('click',()=>flowSync.start());flowSync.update();}
  function login(message=''){
   article.innerHTML=header()+'<form class="internal-login" id="internalLogin"><h2>내부 전용 자료</h2><p>비밀번호를 입력해 주세요.</p><label for="internalPassword">비밀번호</label><input id="internalPassword" type="password" autocomplete="current-password" required maxlength="256"><button type="submit">잠금 해제</button><p id="internalError" role="alert">'+esc(message)+'</p></form>';
   const form=document.getElementById('internalLogin'),input=document.getElementById('internalPassword');input.focus();
@@ -42,5 +47,5 @@ export function mountInternal({renderBody}){
   if(session){try{const e=await envelope();if(e.salt!==session.salt)throw Error('Session expired');const result=await unlock(e,bytes(session.key));if(!active||ticket!==generation)return;prepare(result);render();return;}catch{removeSession();}}
   if(active&&ticket===generation)login();
  }
- return {show,leave(){active=false;++generation;button.removeAttribute('aria-current');clear();}};
+ return {show,leave(){flowSync.cancel();active=false;++generation;button.removeAttribute('aria-current');clear();}};
 }

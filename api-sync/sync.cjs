@@ -77,7 +77,7 @@ async function main(){
  const collected=makeData(publicPrevious,split.publicTasks,split.publicDetails);
  const next={...previous,...collected,models:collected.models.map(m=>({...previous.models.find(p=>p.id===m.id),...m})),docs:collected.docs.map(d=>({...previous.docs.find(p=>p.id===d.id),...d}))};await loadAssets(next,previous);
  const detailMap=new Map(details.map(d=>[d.postId,d]));
- const internal={docs:split.privateTasks.map(t=>{const d=detailMap.get(t.postId);assert.equal(d.projectId,PROJECT);return {id:d.postId,parentId:t.upTaskId,title:d.title,...parseContent(d),author:d.registerName||'',date:d.registeredDateTime||'',editedDateTime:d.editedDateTime||'',attachments:d.attachments||[],url:d.connectUrl||'https://flow.team/main.act?detail='+PROJECT+'|'+d.postId};}),assets:{}};
+ const internal={...(process.env.NAMU_SYNC_TOKEN?{syncToken:process.env.NAMU_SYNC_TOKEN}:{}),docs:split.privateTasks.map(t=>{const d=detailMap.get(t.postId);assert.equal(d.projectId,PROJECT);return {id:d.postId,parentId:t.upTaskId,title:d.title,...parseContent(d),author:d.registerName||'',date:d.registeredDateTime||'',editedDateTime:d.editedDateTime||'',attachments:d.attachments||[],url:d.connectUrl||'https://flow.team/main.act?detail='+PROJECT+'|'+d.postId};}),assets:{}};
  await loadAssets(internal,{assets:{}});
  const privatePath=path.join(path.dirname(filename),'internal/encrypted.json');
  const oldEnvelope=fs.existsSync(privatePath)?JSON.parse(fs.readFileSync(privatePath,'utf8')):null;

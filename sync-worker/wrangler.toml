@@ -1,0 +1,8 @@
+name = "namu-flow-sync"
+main = "worker.mjs"
+compatibility_date = "2026-10-26"
+account_id = "963c1aec6fec66a18ab3c550c670e68e"
+workers_dev = true
+
+[observability]
+enabled = false

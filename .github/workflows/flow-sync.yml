@@ -1,8 +1,14 @@
 name: Flow API sync & publish
+run-name: ${{ inputs.web_request_id && format('NAMU web sync {0}', inputs.web_request_id) || 'Flow API sync & publish' }}
 on:
   schedule:
     - cron: '0 * * * *'
   workflow_dispatch:
+    inputs:
+      web_request_id:
+        description: Website sync request identifier
+        required: false
+        type: string
   push:
     branches: [main]
     paths: ['index.html', 'css/**', 'js/**', 'data/**', 'images/**', 'internal/**', 'api-sync/**', '.github/workflows/flow-sync.yml']
@@ -32,12 +38,14 @@ jobs:
         working-directory: api-sync
       - run: npm test
         working-directory: api-sync
+      - run: node --test sync-worker/worker.test.mjs
       - name: Read Flow and update data only
         id: sync
         if: github.event_name != 'push'
         env:
           FLOW_API_KEY: ${{ secrets.FLOW_API_KEY }}
           INTERNAL_PASSWORD: ${{ secrets.INTERNAL_PASSWORD }}
+          NAMU_SYNC_TOKEN: ${{ secrets.NAMU_SYNC_TOKEN }}
         run: node api-sync/sync.cjs index.html
       - name: Save documents and successful sync time
         if: steps.sync.outcome == 'success'
