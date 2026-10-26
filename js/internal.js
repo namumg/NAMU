@@ -6,12 +6,12 @@ const sessionKey='namu-internal-session-v1';
 const date=s=>String(s||'').replace(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2}).*$/,'$1.$2.$3 $4:$5');
 export function mountInternal({renderBody}){
  const article=document.getElementById('article'),bread=document.getElementById('bread');
- const button=document.createElement('a');button.href='#/internal';button.className='internal-access-button';button.innerHTML=lockIcon+'<span>내부 전용<small>Internal Access</small></span>';document.getElementById('sidebar').append(button);
+ const button=document.createElement('a');button.href='#/internal';button.className='internal-access-button';button.innerHTML=lockIcon+'<span>내부 전용</span>';document.getElementById('sidebar').append(button);
  let data=null,active=false,generation=0,assetURLs={},urls=[];
  const clear=()=>{data=null;urls.forEach(URL.revokeObjectURL);urls=[];assetURLs={};const lightbox=document.getElementById('lightbox');lightbox.close();document.getElementById('largeImage').removeAttribute('src');};
  const removeSession=()=>{try{sessionStorage.removeItem(sessionKey)}catch{}};
  const saveSession=value=>{try{sessionStorage.setItem(sessionKey,JSON.stringify(value))}catch{}};
- const header=()=>'<header class="document-header internal-heading"><div class="eyebrow">'+lockIcon+' 내부 전용</div><h1>Internal Access</h1><div class="meta">NAMU Engineering Resources</div><div class="document-actions">'+(data?'<button id="internalRefresh">새로고침</button><button id="internalLock">'+lockIcon+' 잠금</button>':'')+'</div></header>';
+ const header=()=>'<header class="document-header internal-heading"><div class="eyebrow">'+lockIcon+' 내부 전용</div><div class="document-actions">'+(data?'<button id="internalRefresh">새로고침</button><button id="internalLock">'+lockIcon+' 잠금</button>':'')+'</div></header>';
  async function envelope(){const r=await fetch(new URL('../internal/encrypted.json',import.meta.url),{cache:'no-store'});if(!r.ok)throw Error('자료를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');const e=await r.json();if(e.version!==1||e.iterations!==600000)throw Error('자료 형식을 확인할 수 없습니다.');return e;}
  async function unlock(e,raw){const k=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt']);const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes(e.iv),additionalData:new TextEncoder().encode('NAMU Internal Access v1')},k,bytes(e.ciphertext));const result=JSON.parse(new TextDecoder().decode(plain));if(!Array.isArray(result.docs))throw Error('Invalid data');return result;}
  function prepare(result){clear();data=result;for(const [source,uri] of Object.entries(result.assets||{})){const m=uri.match(/^data:(image\/(?:png|jpeg|gif));base64,(.+)$/s);if(!m)continue;const url=URL.createObjectURL(new Blob([bytes(m[2])],{type:m[1]}));urls.push(url);assetURLs[source]=url;}}
@@ -36,7 +36,7 @@ export function mountInternal({renderBody}){
   document.title=(d?d.title+' · ':'')+'Internal Access · NAMU';
  }
  async function show(){
-  active=true;button.setAttribute('aria-current','page');const ticket=++generation;document.querySelector('.page-grid').classList.remove('home-grid');document.getElementById('toc').innerHTML='';document.getElementById('sidebar').classList.remove('visible');document.getElementById('menu').setAttribute('aria-expanded','false');bread.innerHTML='<button class="reopen-sidebar" id="reopenSidebar" aria-label="목차 펼치기">☰ 목차</button><a href="#/">메인</a><span>/</span><span>Internal Access</span>';window.scrollTo(0,0);
+  active=true;button.setAttribute('aria-current','page');const ticket=++generation;document.querySelector('.page-grid').classList.remove('home-grid');document.getElementById('toc').innerHTML='';document.getElementById('sidebar').classList.remove('visible');document.getElementById('menu').setAttribute('aria-expanded','false');bread.innerHTML='<button class="reopen-sidebar" id="reopenSidebar" aria-label="목차 펼치기">☰ 목차</button><a href="#/">메인</a><span>/</span><span>내부 전용</span>';window.scrollTo(0,0);
   if(data){render();return;}article.innerHTML='<p role="status">내부 전용 영역을 확인하는 중…</p>';
   let session;try{session=JSON.parse(sessionStorage.getItem(sessionKey));}catch{}
   if(session){try{const e=await envelope();if(e.salt!==session.salt)throw Error('Session expired');const result=await unlock(e,bytes(session.key));if(!active||ticket!==generation)return;prepare(result);render();return;}catch{removeSession();}}
