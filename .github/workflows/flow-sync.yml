@@ -54,6 +54,7 @@ jobs:
           git config user.email 'wiki-updater@localhost'
           git add -- index.html data images internal
           git commit -m 'Sync Trouble Shooting from Flow API'
+          git pull --rebase origin main
           git push origin HEAD:main
       - name: Prepare public site only
         id: ready
